@@ -28,7 +28,7 @@ class ChessGUI(tk.Tk):
         # Initialize chess engine
         try:
             self.engine = chess.engine.SimpleEngine.popen_uci(self.engine_path)
-            self.engine.configure({"Skill Level": 10})  # Adjust this value for different difficulties between 1-20
+            self.engine.configure({"Skill Level": 1})  # Adjust this value for different difficulties between 1-20 dont think it works
         except Exception as e:
             print(f"Error initializing the engine: {e}")
             return
