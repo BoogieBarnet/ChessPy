@@ -127,6 +127,7 @@ class ChessGUI(tk.Tk):
             print(f"Player's turn to move.")
 
     def check_game_over(self):
+        result = ""
         if self.board.is_checkmate():
             result = "Checkmate"
             self.game_over = True  # Set game_over flag to True
@@ -137,8 +138,11 @@ class ChessGUI(tk.Tk):
             result = "Draw due to insufficient material"
             self.game_over = True  # Set game_over flag to True
         elif self.board.can_claim_draw():
-            result = "Draw claimable"
+            result = "Draw"
             self.game_over = True  # Set game_over flag to True
+            
+        if self.game_over:
+            print(result)
 
     def show_piece_key(self):
         # Create a new Toplevel window
