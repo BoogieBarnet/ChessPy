@@ -16,7 +16,7 @@ class ChessGUI(tk.Tk):
         super().__init__()
         self.title("Red Brick Chess Game")
         self.geometry("600x600")
-
+        self.last_move = None
         # Ensure the Stockfish engine path is correct
         self.engine_path = "stockfish.exe"  # Adjust the path as necessary
         if not os.path.isfile(self.engine_path):
@@ -31,7 +31,7 @@ class ChessGUI(tk.Tk):
         except Exception as e:
             print(f"Error initializing the engine: {e}")
             return
-        
+
         self.canvas = tk.Canvas(self, width=600, height=600)
         self.canvas.pack()
         self.canvas.bind("<Button-1>", self.square_clicked)  # Bind left mouse clicks to square_clicked method
@@ -42,6 +42,7 @@ class ChessGUI(tk.Tk):
         self.draw_pieces()
 
         self.show_piece_key()  # Display the chess piece key
+        self.update_status()  # Initial status update
         print("Board setup completed.")
 
     def load_images(self):
@@ -66,11 +67,52 @@ class ChessGUI(tk.Tk):
         for piece_symbol, path in piece_paths.items():
             if not os.path.isfile(path):
                 raise FileNotFoundError(f"Image file not found: {path}")
-            image = Image.open(path)  # Open the image file
-            image = image.resize((65, 65), Image.LANCZOS)  # Resize the image if necessary
-            piece_images[piece_symbol] = ImageTk.PhotoImage(image)  # Create a PhotoImage
+            image = Image.open(path)
+            image = image.resize((65, 65), Image.LANCZOS)
+            piece_images[piece_symbol] = ImageTk.PhotoImage(image)
         print("Images loaded.")
         return piece_images
+
+    def show_piece_key(self):
+        key_window = tk.Toplevel(self)
+        key_window.title("Chess Pieces Key")
+
+        pieces_info = {
+            'P': ("White Pawn", "images/white_pawn.png"),
+            'R': ("White Rook", "images/white_rook.png"),
+            'N': ("White Knight", "images/white_knight.png"),
+            'B': ("White Bishop", "images/white_bishop.png"),
+            'Q': ("White Queen", "images/white_queen.png"),
+            'K': ("White King", "images/white_king.png"),
+            'p': ("Black Pawn", "images/black_pawn.png"),
+            'r': ("Black Rook", "images/black_rook.png"),
+            'n': ("Black Knight", "images/black_knight.png"),
+            'b': ("Black Bishop", "images/black_bishop.png"),
+            'q': ("Black Queen", "images/black_queen.png"),
+            'k': ("Black King", "images/black_king.png")
+        }
+
+        for symbol, (name, path) in pieces_info.items():
+            frame = tk.Frame(key_window)
+            frame.pack(side=tk.TOP, expand=True, fill=tk.X)
+            try:
+                img = Image.open(path)
+                img.thumbnail((50, 50), Image.LANCZOS)
+                tk_img = ImageTk.PhotoImage(img)
+                img_label = tk.Label(frame, image=tk_img)
+                img_label.image = tk_img  # Keep a reference
+                img_label.pack(side=tk.LEFT)
+            except IOError:
+                print(f"Unable to load image for {name}.")
+                continue
+
+            label = tk.Label(frame, text=name)
+            label.pack(side=tk.LEFT)
+
+    def update_status(self):
+        turn = "White's turn" if self.board.turn == chess.WHITE else "Black's turn"
+        last_move = f"Last move: {self.last_move.uci()}" if self.last_move else "No moves made yet"
+        print(f"{turn} | {last_move}")
 
     def draw_board(self):
         self.canvas.delete("square")
@@ -90,7 +132,7 @@ class ChessGUI(tk.Tk):
                 symbol = piece.symbol() if piece.color == chess.WHITE else piece.symbol().lower()
                 image = self.piece_images[symbol]
                 col = chess.square_file(square)
-                row = 7 - chess.square_rank(square)  # row is reversed because tkinter starts from the top left corner
+                row = 7 - chess.square_rank(square)
                 x0 = (col * 75) + 5
                 y0 = (row * 75) + 5
                 self.canvas.create_image(x0, y0, image=image, tags=("piece",), anchor="nw")
@@ -105,8 +147,10 @@ class ChessGUI(tk.Tk):
             move = chess.Move(self.selected_square, square)
             if move in self.board.legal_moves:
                 self.board.push(move)
+                self.last_move = move
                 self.selected_square = None
                 self.draw_pieces()
+                self.update_status()
                 self.after(100, self.engine_move)
         elif piece and (piece.color == self.board.turn):
             self.selected_square = square
@@ -114,45 +158,9 @@ class ChessGUI(tk.Tk):
     def engine_move(self):
         result = self.engine.play(self.board, chess.engine.Limit(time=0.1))
         self.board.push(result.move)
+        self.last_move = result.move
         self.draw_pieces()
-
-    def show_piece_key(self):
-        # Create a new Toplevel window
-        key_window = tk.Toplevel(self)
-        key_window.title("Chess Pieces Key")
-
-        # Define labels and paths for each piece
-        pieces_info = {
-            'P': ("White Pawn Steven", "images/white_pawn.png"),
-            'R': ("White Rook Thomas", "images/white_rook.png"),
-            'N': ("White Knight Curtis", "images/white_knight.png"),
-            'B': ("White Bishop Codie", "images/white_bishop.png"),
-            'Q': ("White Queen Nathan", "images/white_queen.png"),
-            'K': ("White King Jack", "images/white_king.png"),
-            'p': ("Black Pawn Steven", "images/black_pawn.png"),
-            'r': ("Black Rook Thomas", "images/black_rook.png"),
-            'n': ("Black Knight Curtis", "images/black_knight.png"),
-            'b': ("Black Bishop Codie", "images/black_bishop.png"),
-            'q': ("Black Queen Nathan", "images/black_queen.png"),
-            'k': ("Black King Jack", "images/black_king.png")
-        }
-
-        for symbol, (name, path) in pieces_info.items():
-            frame = tk.Frame(key_window)
-            frame.pack(side=tk.TOP, expand=True, fill=tk.X)
-            try:
-                img = Image.open(path)
-                img.thumbnail((50, 50), Image.LANCZOS)
-                tk_img = ImageTk.PhotoImage(img)
-                img_label = tk.Label(frame, image=tk_img)
-                img_label.image = tk_img  # Keep a reference
-                img_label.pack(side=tk.LEFT)
-            except IOError:
-                print(f"Unable to load image for {name}.")
-                continue
-
-            label = tk.Label(frame, text=name)
-            label.pack(side=tk.LEFT)
+        self.update_status()
 
     def on_close(self):
         if hasattr(self, 'engine') and self.engine:
